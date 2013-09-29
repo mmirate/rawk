@@ -28,15 +28,28 @@ body {
     background-color: #ddd;
 }
 
-#side-bar a {
+#side-bar a , #side-bar strong {
     display: inline;
     line-height:2.1em;
     white-space: nowrap;
-    padding: 0.1ex 1ex 0.1em 1ex;
+    padding: 0.5em 1ex 0.4em 1ex;
     color: #336699;
     background-color: transparent;
     text-decoration: none;
     font-size: 1em;
+}
+
+#side-bar strong {
+    color: #111;
+    font-weight: normal;
+}
+
+.barLevel + .barLevel {
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+#side-bar .breadcrumb {
+    background-color: #ccc;
 }
 
 /* Main Copy */
