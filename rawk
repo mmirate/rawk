@@ -35,33 +35,59 @@ rawk_template() {
 }
 
 rawk_submenu() {
-    fbase="$(echo ${1##*/} | sed -e 's|\(.*\)\..[[:alnum:]]*|\1|')"
-    fc=""
-    file_list=""
-
-    # add cwd
-    echo '<div id="side-bar">'
-    echo '<a href="index.html">.</a> '
-
-    # parent
-    if [ "${1%/*}" != "." ]; then
-        echo '<a href="../index.html">..</a> '
-    fi
+    local fbase="$(echo ${1##*/} | sed -e 's|\(.*\)\..[[:alnum:]]*|\1|')"
+    local fdir="${1%/*}"
+    local fc=""
 
     for filter in $bl
     do
         fc="$fc | grep -ve '$filter'"
     done
-    
-    file_list="$(eval ls -1 $(echo ${1%/*}) $fc | sed -e 's/\.md\([ ]*\)/\.html\1/g' | uniq)"
-    file_list="$(echo \"$file_list\" | sort | xargs)"
-    for file in $file_list
-    do
-        printf "\n <a href=\"$(basename $file | sed -e 's/\.md$/\.html/g')\">"
-        printf "$(basename $file | sed -e 's/\(..*\)\.[[:alnum:]]*/\1/')"
-        printf "</a> "
-    done
-     printf "\n</div>\n"
+
+    local file_list="$(eval ls -1 $(echo ${1%/*}) $fc | sed -e 's/\.md\([ ]*\)/\.html\1/g' | sort -u | xargs)"
+
+    local parent=""
+    if [ "${1%/*}" != "." ] && [ -n "$recursive_menu" ]; then
+        parent="true"
+    fi
+
+    # fully bail out in the trivial case
+    if [ -z "$file_list" ] && [ -z "$parent" ]; then return; fi
+
+    if [ -z "$2" ]; then echo '<div id="side-bar">'; fi
+
+    if [ -n "$parent" ]; then
+        rawk_submenu $(dirname $(dirname $1))/index.md $(basename $(dirname $1)) $(if [ -z "$3" ]; then basename $1; else echo INDEX.md; fi)
+    elif [ -z "$recursive_menu" ]; then
+        if [ "$fbase" = "index" ]; then echo '<strong>.</strong> '; else echo '<a href="index.html">.</a> '; fi
+    fi
+
+    if [ -z "$recursive_menu" ] && [ -n "$parent" ]; then
+        echo '<a href="../index.html">..</a> '
+    fi
+
+
+    if [ -n "$file_list" ]; then
+        # don't print an empty div, even if there were non-empty parents
+        #   (e.g. a directory whose only content is index.html)
+        if [ -n "$recursive_menu" ]; then echo -n '<div class="barLevel">'; fi
+        for file in $file_list
+        do
+            href="href=\"$(echo ${fdir##.}/$file)\""
+            body="$(basename $file | sed -e 's/\(..*\)\.[[:alnum:]]*/\1/')"
+            if [ "${3%.*}" == "index" ] && [ "$2" == "$file" ] || [ "${1%.*}" = "$fdir/${file%.*}" ]; then
+                # This link would be to the current page
+                printf "\n <strong>$body</strong>"
+            elif [ "$2" == "$file" ]; then
+                # This link will be to a parent page
+                printf "\n <a class=\"breadcrumb\" $href>$body</a>";
+            else
+                printf "\n <a $href>$body</a>"
+            fi
+        done
+        if [ -n "$recursive_menu" ]; then echo "</div>"; fi
+    fi
+    if [ -z "$2" ]; then printf "\n</div>\n"; fi
 }
 
 rawk_page() {
